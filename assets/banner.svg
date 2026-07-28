@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-label="petkit-bridge: PetKit cloud to local HTTP API">
+  <!-- background -->
+  <rect width="960" height="300" rx="14" fill="#113C46"/>
+
+  <!-- title -->
+  <text x="480" y="92" text-anchor="middle"
+        font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+        font-size="46" font-weight="700" fill="#F4EDE0" letter-spacing="1">petkit-bridge</text>
+  <text x="480" y="126" text-anchor="middle"
+        font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+        font-size="16" fill="#8FB2B8" letter-spacing="2">PetKit cloud &#8594; local HTTP API &#183; self-healing session</text>
+
+  <!-- cloud (left) -->
+  <g transform="translate(150,180)" stroke="#F4EDE0" stroke-width="3.5" fill="none"
+     stroke-linejoin="round" stroke-linecap="round">
+    <path d="M 18 42 A 17 17 0 0 1 18 8 A 24 24 0 0 1 64 -2 A 16 16 0 0 1 74 42 Z"/>
+  </g>
+
+  <!-- house (right) -->
+  <g transform="translate(724,178)" stroke="#F4EDE0" stroke-width="3.5" fill="none"
+     stroke-linejoin="round" stroke-linecap="round">
+    <path d="M -2 24 L 24 -2 L 50 24"/>
+    <path d="M 5 19 V 46 H 43 V 19"/>
+    <rect x="19" y="27" width="10" height="10" fill="#F0B34C" stroke="none"/>
+  </g>
+
+  <!-- bridge line: cloud -> house, gentle arch -->
+  <path d="M 232 222 Q 480 178 716 222" stroke="#F4EDE0" stroke-width="3.5"
+        fill="none" stroke-linecap="round"/>
+
+  <!-- data packets on the line -->
+  <circle cx="330" cy="211" r="4.5" fill="#F0B34C"/>
+  <circle cx="392" cy="204" r="4.5" fill="#F0B34C"/>
+  <circle cx="600" cy="205" r="4.5" fill="#F0B34C"/>
+
+  <!-- cat sitting at the apex of the bridge -->
+  <g transform="translate(480,199)" fill="#F4EDE0">
+    <!-- tail -->
+    <path d="M 11 -6 q 15 3 13 -16" stroke="#F4EDE0" stroke-width="3.5"
+          fill="none" stroke-linecap="round"/>
+    <!-- body -->
+    <ellipse cx="0" cy="-15" rx="12.5" ry="15"/>
+    <!-- head -->
+    <circle cx="0" cy="-35" r="9.5"/>
+    <!-- ears -->
+    <path d="M -8.5 -39 L -7 -50 L -1.5 -42.5 Z"/>
+    <path d="M 8.5 -39 L 7 -50 L 1.5 -42.5 Z"/>
+  </g>
+</svg>
