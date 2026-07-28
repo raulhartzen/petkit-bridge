@@ -18,7 +18,9 @@ configurable via the BRIDGE_TOKEN env var. Serve on the local network ONLY.
 """
 
 import asyncio
+import hmac
 import logging
+import re
 import os
 from functools import wraps
 
@@ -82,19 +84,36 @@ BRIDGE_PORT = int(os.environ.get("BRIDGE_PORT", "8787"))
 REFRESH_INTERVAL = int(os.environ.get("PETKIT_REFRESH_INTERVAL", "60"))
 
 
+_TOKEN_QS_RE = re.compile(r"(token=)[^&\s]+")
+
+
+class RedactingAccessLogger(web.AccessLogger):
+    """Access logger that masks the ?token= query parameter in request
+    lines, so the bridge token never ends up in (docker) logs. WHEP sources
+    must pass the token in the query string, hence the need for this.
+    NB: overrides an aiohttp internal (_format_r); verified against the
+    pinned aiohttp==3.14.1."""
+
+    @staticmethod
+    def _format_r(request, response, time):  # noqa: N802
+        line = web.AccessLogger._format_r(request, response, time)
+        return _TOKEN_QS_RE.sub(r"\1[REDACTED]", line)
+
+
 def require_token(handler):
-    """Decorator: rejects requests without the correct token (if configured).
+    """Decorator: rejects requests without the correct token.
     The token is accepted in the X-Auth-Token header or in the ?token= query
     (needed for go2rtc WHEP sources, which cannot send custom headers)."""
 
     @wraps(handler)
     async def wrapper(request: web.Request):
-        if BRIDGE_TOKEN:
-            provided = request.headers.get("X-Auth-Token", "")
-            if not provided:
-                provided = request.query.get("token", "")
-            if provided != BRIDGE_TOKEN:
-                return web.json_response({"error": "unauthorized"}, status=401)
+        provided = request.headers.get("X-Auth-Token", "")
+        if not provided:
+            provided = request.query.get("token", "")
+        # Constant-time comparison; BRIDGE_TOKEN is guaranteed non-empty
+        # (startup refuses to run without it, fail-closed).
+        if not provided or not hmac.compare_digest(provided, BRIDGE_TOKEN):
+            return web.json_response({"error": "unauthorized"}, status=401)
         return await handler(request)
 
     return wrapper
@@ -869,6 +888,12 @@ async def on_startup(app):
         raise RuntimeError(
             "PETKIT_USERNAME and PETKIT_PASSWORD must be set."
         )
+    if not BRIDGE_TOKEN:
+        # Fail closed: an empty token would leave the whole API open.
+        raise RuntimeError(
+            "BRIDGE_TOKEN must be set (generate one: openssl rand -hex 32). "
+            "Refusing to start with an unauthenticated API."
+        )
     # By default a failed initial login does NOT kill the container:
     # the app starts anyway and the background task keeps retrying.
     # Set PETKIT_FATAL_ON_START_FAIL=1 for the old behavior (crash).
@@ -933,4 +958,9 @@ if __name__ == "__main__":
         level=os.environ.get("LOG_LEVEL", "INFO"),
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
-    web.run_app(build_app(), host=BRIDGE_HOST, port=BRIDGE_PORT)
+    web.run_app(
+        build_app(),
+        host=BRIDGE_HOST,
+        port=BRIDGE_PORT,
+        access_log_class=RedactingAccessLogger,
+    )

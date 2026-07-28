@@ -57,7 +57,7 @@ All endpoints (except `/healthz`) require the token, passed as an `Authorization
 |---|---|---|
 | GET | `/healthz` | Bridge status; with `?strict=1` responds 503 if the PetKit session is not valid |
 | GET | `/devices` | List of discovered devices |
-| GET | `/device/{id}` | Raw JSON dump of the device (useful to discover your model's fields) |
+| GET | `/device/{id}` | Raw JSON dump of the device (useful to discover your model's fields) — **redact serial numbers, MAC addresses and Wi-Fi fields before sharing dumps publicly** (e.g. in GitHub issues) |
 | GET | `/device/{id}/state` | Compact state (mapped for feeder d4h, litter box t4, fountain ctw3; other models: use the raw dump) |
 | GET | `/device/{id}/hk-state` | State in the format expected by Homebridge HTTP plugins |
 | GET | `/device/{id}/maint-status` | Maintenance status |
