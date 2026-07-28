@@ -15,7 +15,7 @@
 
 Local HTTP bridge for **PetKit** devices, designed for integration with Homebridge (generic HTTP plugins) and go2rtc (video via WHEP). It relies on the unofficial [pypetkitapi](https://github.com/Jezza34000/py-petkit-api) library to talk to the PetKit cloud and exposes a small token-protected local API.
 
-> **Note:** this is *not* a Homebridge plugin (nothing to install inside Homebridge). It is a **companion service** that runs next to Homebridge: you point generic HTTP plugins (e.g. `homebridge-http-switch`) at its endpoints. Ready-to-paste examples below.
+> **Using Homebridge?** There is an official companion plugin: [homebridge-petkit-bridge](https://github.com/raulhartzen/homebridge-petkit-bridge) ([npm](https://www.npmjs.com/package/homebridge-petkit-bridge)). Install it from the Homebridge UI, point it at this bridge (URL + token) and your devices are auto-discovered as HomeKit accessories — no manual accessory configuration needed. This bridge itself is *not* a Homebridge plugin: it is the **companion service** the plugin (or any HTTP client) talks to. Prefer wiring things manually? Generic HTTP plugins (e.g. `homebridge-http-switch`) work too — ready-to-paste examples below.
 
 **Unofficial** project, not affiliated with PetKit. Use at your own risk.
 
@@ -69,7 +69,9 @@ All endpoints (except `/healthz`) require the token, passed as an `Authorization
 | POST | `/device/{id}/fountain` | Fountain commands |
 | POST/PATCH/DELETE | `/device/{id}/whep` | WHEP video sessions for go2rtc (SDP offer, trickle ICE, teardown) |
 
-## Homebridge examples
+## Homebridge examples (manual setup)
+
+The recommended way to use this bridge with Homebridge is the [homebridge-petkit-bridge](https://github.com/raulhartzen/homebridge-petkit-bridge) plugin, which auto-discovers everything. The examples below are the **manual alternative** using generic HTTP plugins — useful for custom setups or unsupported device types.
 
 The examples below assume the bridge runs at `http://192.168.1.10:8787` and were written for these devices: a Yumshare Solo feeder (type `d4h`), a Puramax 2 litter box (type `t4`) and an Eversweet Max fountain (type `ctw3`). First call `GET /devices` (with your token) to find your device IDs, then replace `DEVICE_ID` and `YOUR_TOKEN` in the snippets.
 
