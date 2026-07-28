@@ -1,10 +1,21 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="petkit-bridge — PetKit cloud to local HTTP API" width="820">
+  <img src="assets/banner.svg" alt="petkit-bridge — PetKit cloud to Homebridge/HomeKit" width="820">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/works%20with-Homebridge-6f42c1" alt="Works with Homebridge">
+  <img src="https://img.shields.io/badge/Apple-HomeKit-0b84fe" alt="Apple HomeKit">
+  <img src="https://img.shields.io/badge/Docker-ready-2496ed" alt="Docker ready">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
 </p>
 
 # petkit-bridge
 
-Local HTTP bridge for **PetKit** devices (feeders, litter boxes, fountains), designed for integration with Homebridge (generic HTTP plugins) and go2rtc (video via WHEP). It relies on the unofficial [pypetkitapi](https://github.com/Jezza34000/py-petkit-api) library to talk to the PetKit cloud and exposes a small token-protected local API.
+**Bring your PetKit feeders, litter boxes and fountains into Apple HomeKit via Homebridge — no official plugin required.**
+
+Local HTTP bridge for **PetKit** devices, designed for integration with Homebridge (generic HTTP plugins) and go2rtc (video via WHEP). It relies on the unofficial [pypetkitapi](https://github.com/Jezza34000/py-petkit-api) library to talk to the PetKit cloud and exposes a small token-protected local API.
+
+> **Note:** this is *not* a Homebridge plugin (nothing to install inside Homebridge). It is a **companion service** that runs next to Homebridge: you point generic HTTP plugins (e.g. `homebridge-http-switch`) at its endpoints. Ready-to-paste examples below.
 
 **Unofficial** project, not affiliated with PetKit. Use at your own risk.
 
@@ -28,7 +39,7 @@ The bridge is designed to be **resilient to cloud session expiry**: the PetKit s
 ## Quick start
 
 ```bash
-git clone https://github.com/raulhartzen/petkit-bridge
+git clone https://github.com/raulhartzen/petkit-bridge.git
 cd petkit-bridge
 cp .env.example .env        # fill in credentials and token
 cp docker-compose.example.yml docker-compose.yml

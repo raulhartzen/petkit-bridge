@@ -8,7 +8,7 @@
         font-size="46" font-weight="700" fill="#F4EDE0" letter-spacing="1">petkit-bridge</text>
   <text x="480" y="126" text-anchor="middle"
         font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
-        font-size="16" fill="#8FB2B8" letter-spacing="2">PetKit cloud &#8594; local HTTP API &#183; self-healing session</text>
+        font-size="16" fill="#8FB2B8" letter-spacing="2">PetKit cloud &#8594; Homebridge / HomeKit &#183; self-healing session</text>
 
   <!-- cloud (left) -->
   <g transform="translate(150,180)" stroke="#F4EDE0" stroke-width="3.5" fill="none"
