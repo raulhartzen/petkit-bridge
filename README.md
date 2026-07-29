@@ -177,6 +177,41 @@ streams:
 
 The streaming module (`agora/`) is included in this repository — adapted from the MIT-licensed [homeassistant_petkit](https://github.com/Jezza34000/homeassistant_petkit) integration — and its dependencies are in `requirements.txt`, so camera streaming works out of the box. All streaming tokens are obtained at runtime from the PetKit cloud through your own session; no static credentials are involved.
 
+### Cameras in Apple Home (field-tested recipe)
+
+go2rtc automatically re-serves every stream over RTSP (port `8554` by default), and the verified [homebridge-camera-ffmpeg](https://github.com/homebridge-plugins/homebridge-camera-ffmpeg) plugin can expose that RTSP stream as a HomeKit camera. The full chain:
+
+```
+bridge (WHEP) → go2rtc (RTSP :8554) → homebridge-camera-ffmpeg → Apple Home
+```
+
+1. Configure the stream in `go2rtc.yaml` as shown above and check it plays in the go2rtc web UI (`http://<host>:1984`).
+2. Install **homebridge-camera-ffmpeg** from the Homebridge UI and add a camera (via its settings form, or in `config.json`):
+
+```json
+{
+  "platform": "Camera-ffmpeg",
+  "name": "Camera FFmpeg",
+  "cameras": [
+    {
+      "name": "Feeder camera",
+      "videoConfig": {
+        "source": "-i rtsp://127.0.0.1:8554/yumshare_cam",
+        "stillImageSource": "-i http://127.0.0.1:1984/api/frame.jpeg?src=yumshare_cam",
+        "vcodec": "copy",
+        "audio": false
+      }
+    }
+  ]
+}
+```
+
+Use `127.0.0.1` if Homebridge runs on the same host as go2rtc, otherwise the host's LAN IP. `"vcodec": "copy"` passes the H.264 stream through without transcoding (low latency, low CPU). The `stillImageSource` uses go2rtc's frame endpoint for tile previews.
+
+3. Restart Homebridge. Cameras are exposed as **individual accessories**: add each one in the Home app (**+ → Add Accessory → More options**) using the pairing code shown in the Homebridge log/UI.
+
+If the first live view stays black, retry after a few seconds: the initial request has to wake the whole chain (Home → ffmpeg → go2rtc → WHEP → PetKit cloud).
+
 ## Security
 
 - Credentials live only in the `.env` file, which is excluded from git. Never put secrets in `bridge.py` or in the compose file.
