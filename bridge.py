@@ -759,6 +759,89 @@ async def whep_delete(request: web.Request):
     return web.Response(status=200)
 
 
+
+@require_token
+async def device_events(request: web.Request):
+    """Normalized event feed for a device. Query params:
+      ?since=<unix ts>  -> only events with timestamp > since
+      ?limit=<n>        -> max events returned (default 50)
+    Returns {"events": [...]} sorted newest first, each event shaped as:
+      {source, type, pet_id, pet_name, weight_g, start, end, timestamp, event_id}
+    Litter boxes expose a list of records (pet visits, cleanings); feeders
+    expose eat/feed sessions grouped by day. Field names observed on real
+    t4 / d4h dumps; absent fields are null."""
+    device_id = request.match_info["device_id"]
+    dev = bridge._find(device_id)
+    if dev is None:
+        return web.json_response({"error": "device not found"}, status=404)
+
+    try:
+        since = float(request.query.get("since", 0))
+    except ValueError:
+        since = 0.0
+    try:
+        limit = max(1, min(500, int(request.query.get("limit", 50))))
+    except ValueError:
+        limit = 50
+
+    raw = _to_dict(dev)
+    records = raw.get("device_records")
+    events: list[dict] = []
+
+    def _ts_from_event_id(eid):
+        # Feeder items sometimes lack a timestamp but embed it in the
+        # event_id ("<device>_<ts>").
+        try:
+            return int(str(eid).rsplit("_", 1)[-1])
+        except (ValueError, IndexError):
+            return None
+
+    if isinstance(records, list):
+        # Litter box: flat list of records.
+        for rec in records:
+            if not isinstance(rec, dict):
+                continue
+            content = rec.get("content") or {}
+            events.append({
+                "source": "litter",
+                "type": rec.get("enum_event_type") or rec.get("event_type"),
+                "pet_id": rec.get("pet_id"),
+                "pet_name": rec.get("pet_name"),
+                "weight_g": content.get("pet_weight"),
+                "start": None,
+                "end": None,
+                "timestamp": rec.get("timestamp"),
+                "event_id": rec.get("event_id"),
+            })
+    elif isinstance(records, dict):
+        # Feeder: {"eat": [day, ...], "feed": [day, ...], "pet": [...]}.
+        for kind in ("eat", "feed", "pet"):
+            for day in records.get(kind) or []:
+                if not isinstance(day, dict):
+                    continue
+                for item in day.get("items") or []:
+                    if not isinstance(item, dict):
+                        continue
+                    ts = (item.get("timestamp")
+                          or item.get("eat_start_time")
+                          or _ts_from_event_id(item.get("event_id")))
+                    events.append({
+                        "source": "feeder",
+                        "type": item.get("enum_event_type") or kind,
+                        "pet_id": item.get("pet_id"),
+                        "pet_name": item.get("pet_name"),
+                        "weight_g": item.get("eat_weight"),
+                        "start": item.get("eat_start_time"),
+                        "end": item.get("eat_end_time"),
+                        "timestamp": ts,
+                        "event_id": item.get("event_id"),
+                    })
+
+    events = [e for e in events if e["timestamp"] and e["timestamp"] > since]
+    events.sort(key=lambda e: e["timestamp"], reverse=True)
+    return web.json_response({"events": events[:limit]})
+
+
 async def healthz(request: web.Request):
     """Health check. By default always responds 200 (process alive).
     With ?strict=1 it responds 503 when the Petkit session is NOT valid:
@@ -937,6 +1020,7 @@ def build_app() -> web.Application:
     app.router.add_get("/devices", list_devices)
     app.router.add_get("/device/{device_id}", device_raw)
     app.router.add_get("/device/{device_id}/state", device_state)
+    app.router.add_get("/device/{device_id}/events", device_events)
     app.router.add_get("/device/{device_id}/hk-state", hk_state)
     app.router.add_post("/device/{device_id}/feed", feed)
     app.router.add_post("/feed-all", feed_all)

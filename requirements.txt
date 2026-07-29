@@ -1,5 +1,8 @@
-# NB: check the pypetkitapi version actually in use on your server
-# (pip show pypetkitapi) and pin it here for reproducible builds, e.g.:
-# pypetkitapi==X.Y.Z
+# Versions pinned to the author's production deployment.
 aiohttp==3.14.1
 pypetkitapi==1.27.0
+
+# --- Camera streaming (WHEP/agora module) ---
+websockets==15.0.1
+sdp-transform==1.1.0
+webrtc-models==0.3.0

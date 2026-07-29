@@ -60,6 +60,7 @@ All endpoints (except `/healthz`) require the token, passed as an `Authorization
 | GET | `/device/{id}` | Raw JSON dump of the device (useful to discover your model's fields) — **redact serial numbers, MAC addresses and Wi-Fi fields before sharing dumps publicly** (e.g. in GitHub issues) |
 | GET | `/device/{id}/state` | Compact state (mapped for feeder d4h, litter box t4, fountain ctw3; other models: use the raw dump) |
 | GET | `/device/{id}/hk-state` | State in the format expected by Homebridge HTTP plugins |
+| GET | `/device/{id}/events` | Normalized event feed (litter visits with pet name/weight, feeder eat/feed sessions); `?since=` and `?limit=` supported |
 | GET | `/device/{id}/maint-status` | Maintenance status |
 | POST | `/device/{id}/feed` | Manual food dispensing |
 | POST | `/feed-all` | Dispense on all feeders |
@@ -174,7 +175,7 @@ streams:
     - webrtc:http://192.168.1.10:8787/device/DEVICE_ID/whep?token=YOUR_TOKEN#format=whep
 ```
 
-This requires the optional WHEP/agora modules to be available to the bridge; without them the endpoint returns 503 and everything else keeps working.
+The streaming module (`agora/`) is included in this repository — adapted from the MIT-licensed [homeassistant_petkit](https://github.com/Jezza34000/homeassistant_petkit) integration — and its dependencies are in `requirements.txt`, so camera streaming works out of the box. All streaming tokens are obtained at runtime from the PetKit cloud through your own session; no static credentials are involved.
 
 ## Security
 
@@ -186,3 +187,8 @@ This requires the optional WHEP/agora modules to be available to the bridge; wit
 
 - Device type names (d4h, t4, ctw3, ...) and state fields come from observing real dumps, not from official documentation: different models may require small adjustments in `device_state`.
 - If the `pypetkitapi` library changes its exception structure, expired-session detection keeps working via the error-message fallback (already included).
+
+## Credits
+
+- [pypetkitapi](https://github.com/Jezza34000/py-petkit-api) by Jezza34000 — the PetKit cloud client this bridge is built on.
+- The `agora/` streaming module is adapted from [homeassistant_petkit](https://github.com/Jezza34000/homeassistant_petkit) by Jezza34000 (MIT), with Agora reverse engineering originally by [@mikey0000](https://github.com/mikey0000).
