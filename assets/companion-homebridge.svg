@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="110" viewBox="0 0 840 110">
+  <rect width="840" height="110" rx="14" fill="#113C46"/>
+  <!-- house with cat (plugin motif) -->
+  <g transform="translate(52,30)" stroke="#F4EDE0" stroke-width="3" fill="none"
+     stroke-linejoin="round" stroke-linecap="round">
+    <path d="M -2 26 L 24 0 L 50 26"/>
+    <path d="M 5 21 V 48 H 43 V 21"/>
+    <rect x="19" y="32" width="10" height="10" fill="#F0B34C" stroke="none"/>
+  </g>
+  <g transform="translate(76,30)" fill="#F4EDE0">
+    <path d="M 7 -3 q 10 2 9 -11" stroke="#F4EDE0" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <ellipse cx="0" cy="-9" rx="7.5" ry="9"/>
+    <circle cx="0" cy="-21" r="5.8"/>
+    <path d="M -5.2 -23.5 L -4.3 -30.5 L -0.9 -25.8 Z"/>
+    <path d="M 5.2 -23.5 L 4.3 -30.5 L 0.9 -25.8 Z"/>
+  </g>
+  <text x="140" y="48" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+        font-size="16" fill="#8FB2B8" letter-spacing="1">WORKS WITH</text>
+  <text x="140" y="76" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+        font-size="24" font-weight="700" fill="#F4EDE0">homebridge-petkit-bridge</text>
+  <text x="762" y="66" text-anchor="middle" font-family="ui-monospace, monospace"
+        font-size="34" font-weight="700" fill="#F0B34C">&#8594;</text>
+</svg>

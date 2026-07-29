@@ -15,6 +15,12 @@
 
 Local HTTP bridge for **PetKit** devices, designed for integration with Homebridge (generic HTTP plugins) and go2rtc (video via WHEP). It relies on the unofficial [pypetkitapi](https://github.com/Jezza34000/py-petkit-api) library to talk to the PetKit cloud and exposes a small token-protected local API.
 
+<p align="center">
+  <a href="https://github.com/raulhartzen/homebridge-petkit-bridge">
+    <img src="https://raw.githubusercontent.com/raulhartzen/petkit-bridge/main/assets/companion-homebridge.png" alt="Works with homebridge-petkit-bridge" width="700">
+  </a>
+</p>
+
 > **Using Homebridge?** There is an official companion plugin: [homebridge-petkit-bridge](https://github.com/raulhartzen/homebridge-petkit-bridge) ([npm](https://www.npmjs.com/package/homebridge-petkit-bridge)). Install it from the Homebridge UI, point it at this bridge (URL + token) and your devices are auto-discovered as HomeKit accessories — no manual accessory configuration needed. This bridge itself is *not* a Homebridge plugin: it is the **companion service** the plugin (or any HTTP client) talks to. Prefer wiring things manually? Generic HTTP plugins (e.g. `homebridge-http-switch`) work too — ready-to-paste examples below.
 
 **Unofficial** project, not affiliated with PetKit. Use at your own risk.

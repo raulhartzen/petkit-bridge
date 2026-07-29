@@ -64,6 +64,11 @@ def _is_session_expired(exc: Exception) -> bool:
     return "session expired" in msg or "log in again" in msg
 
 try:
+    from pypetkitapi import TEMP_CAMERA_TYPES as _CAMERA_TYPES
+except Exception:  # noqa: BLE001
+    _CAMERA_TYPES = set()
+
+try:
     from agora.whep import WhepUpstreamManager
     _WHEP_AVAILABLE = True
 except Exception as _whep_exc:  # noqa: BLE001
@@ -261,11 +266,16 @@ async def list_devices(request: web.Request):
 
     out = []
     for key, val in bridge.entities.items():
+        _model = str(getattr(getattr(val, "device_nfo", None),
+                              "device_type", "") or "").lower()
         out.append(
             {
                 "id": str(key),
                 "name": getattr(val, "name", None),
                 "type": type(val).__name__,
+                # True for camera-equipped models (pypetkitapi's list):
+                # tells clients a WHEP stream is available for this device.
+                "camera": _model in {str(t).lower() for t in _CAMERA_TYPES},
             }
         )
     return web.json_response(out)
