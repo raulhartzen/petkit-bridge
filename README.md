@@ -11,6 +11,8 @@
 
 # petkit-bridge
 
+# v2.0 coming in September 2026 with major changes & bugfixes
+
 **Bring your PetKit feeders, litter boxes and fountains into Apple HomeKit via Homebridge — no official plugin required.**
 
 Local HTTP bridge for **PetKit** devices, designed for integration with Homebridge (generic HTTP plugins) and go2rtc (video via WHEP). It relies on the unofficial [pypetkitapi](https://github.com/Jezza34000/py-petkit-api) library to talk to the PetKit cloud and exposes a small token-protected local API.
