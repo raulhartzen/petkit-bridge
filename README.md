@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="petkit-bridge — PetKit cloud to Homebridge/HomeKit" width="820">
+  <img width="3686" height="1152" alt="banner_2" src="https://github.com/user-attachments/assets/9e847cae-053f-48bf-8e1f-387efcb76d8b" />
 </p>
 
 <p align="center">
@@ -19,7 +19,7 @@ Local HTTP bridge for **PetKit** devices, designed for integration with Homebrid
 
 <p align="center">
   <a href="https://github.com/raulhartzen/homebridge-petkit-bridge">
-    <img src="https://raw.githubusercontent.com/raulhartzen/petkit-bridge/main/assets/companion-homebridge.png" alt="Works with homebridge-petkit-bridge" width="700">
+    <img width="460" height="144" alt="bridge_redirect" src="https://github.com/user-attachments/assets/e431882b-d4b6-4464-95a8-ef5f2fb61be6" alt="Works with homebridge-petkit-bridge" />
   </a>
 </p>
 
