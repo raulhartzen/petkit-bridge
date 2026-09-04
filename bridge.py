@@ -159,8 +159,30 @@ class PetkitBridge:
         self._build_client()
         # First fetch: if credentials/region are wrong, it fails here.
         await self.refresh()
-        if _WHEP_AVAILABLE:
-            self.whep = WhepUpstreamManager(self._client)
+        self._ensure_whep()
+
+    def _ensure_whep(self, reattach: bool = False):
+        """Build the WHEP upstream manager if absent, else optionally
+        re-point an existing one at the current client.
+
+        This used to happen only in start(), immediately after the first
+        refresh(). When that refresh raised -- most often because DNS was not
+        up yet at boot, e.g. after a power cut -- the manager was never built,
+        and nothing rebuilt it afterwards. The data session would self-heal
+        via refresh()/relogin() while every camera kept returning 503
+        "WHEP not available (agora modules not loaded)" until someone
+        restarted the process by hand. Building it lazily on each successful
+        fetch lets camera streaming recover on its own."""
+        if not _WHEP_AVAILABLE:
+            return
+        try:
+            if self.whep is None:
+                self.whep = WhepUpstreamManager(self._client)
+                LOG.info("WHEP upstream manager initialized")
+            elif reattach:
+                self.whep._client = self._client  # best-effort
+        except Exception:  # noqa: BLE001
+            LOG.warning("could not initialize/re-attach the WHEP client")
 
     async def _do_relogin_locked(self):
         """Performs the ACTUAL re-login assuming self._lock is ALREADY held.
@@ -183,11 +205,7 @@ class PetkitBridge:
         import time as _time
         self.session_ok = True
         self._last_ok = _time.monotonic()
-        if _WHEP_AVAILABLE and self.whep is not None:
-            try:
-                self.whep._client = self._client  # best-effort
-            except Exception:  # noqa: BLE001
-                LOG.warning("relogin: could not re-attach the WHEP client")
+        self._ensure_whep(reattach=True)
 
     async def relogin(self):
         """Full internal restart (acquires the lock). Replicates what
@@ -228,6 +246,8 @@ class PetkitBridge:
             import time as _time
             self.session_ok = True
             self._last_ok = _time.monotonic()
+            # Recover from a degraded startup that never built the manager.
+            self._ensure_whep()
 
     @property
     def entities(self) -> dict:
