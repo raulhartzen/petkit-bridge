@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from webrtc_models import RTCIceCandidateInit, RTCIceServer
 from sdp_transform import parse as sdp_parse
 
-from .const import LOGGER, AGORA_APP_ID
+from .const import LOGGER, AGORA_APP_ID, CAMERA_AUDIO
 from .agora_api import SERVICE_IDS, AgoraAPIClient, AgoraResponse
 from .agora_rtm import AgoraRTMSignaling
 from .agora_websocket import AgoraWebSocketHandler
@@ -135,7 +135,7 @@ class WhepUpstreamManager:
             subscribe_retry_delay=1.0,
             subscribe_retry_attempts=3,
             declare_remote_video_ssrc=True,
-            disable_audio_answer=True,
+            disable_audio_answer=not CAMERA_AUDIO,
             on_connection_lost=_on_lost,
         )
 
