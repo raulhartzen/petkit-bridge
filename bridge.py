@@ -93,16 +93,34 @@ _TOKEN_QS_RE = re.compile(r"(token=)[^&\s]+")
 
 
 class RedactingAccessLogger(web.AccessLogger):
-    """Access logger that masks the ?token= query parameter in request
+    """Access logger that masks the ?token= query parameter in access log
     lines, so the bridge token never ends up in (docker) logs. WHEP sources
     must pass the token in the query string, hence the need for this.
-    NB: overrides an aiohttp internal (_format_r); verified against the
-    pinned aiohttp==3.14.1."""
 
-    @staticmethod
-    def _format_r(request, response, time):  # noqa: N802
-        line = web.AccessLogger._format_r(request, response, time)
-        return _TOKEN_QS_RE.sub(r"\1[REDACTED]", line)
+    NB: aiohttp resolves the per-atom formatters with
+    getattr(AccessLogger, "_format_<atom>") on the base class, so overriding
+    _format_r in a subclass is silently ignored. Overriding log() instead
+    works: it is called on the instance with the fully formatted line.
+    Verified against the pinned aiohttp==3.14.1."""
+
+    def log(self, request, response, time):
+        try:
+            fmt_info = self._format_line(request, response, time)
+            values = []
+            extra = {}
+            for key, value in fmt_info:
+                if key.__class__ is str:
+                    extra[key] = value
+                else:
+                    k1, k2 = key
+                    dct = extra.get(k1, {})
+                    dct[k2] = value
+                    extra[k1] = dct
+                values.append(value)
+            line = self._log_format % tuple(values)
+            self.logger.info(_TOKEN_QS_RE.sub(r"\1[REDACTED]", line), extra=extra)
+        except Exception:  # noqa: BLE001
+            self.logger.exception("Error in logging")
 
 
 def require_token(handler):
