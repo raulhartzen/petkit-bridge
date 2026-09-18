@@ -24,6 +24,7 @@ from websockets.exceptions import WebSocketException
 
 from .agora_api import RESPONSE_FLAGS, AgoraResponse
 from .agora_sdp import parse_offer_to_ortc
+from .const import AUDIO_SUBSCRIBE_CODEC
 
 LOGGER = logging.getLogger(__name__)
 
@@ -80,6 +81,8 @@ class AgoraWebSocketHandler:
         self._online_users: set[int] = set()
         self._video_streams: dict[int, dict[str, Any]] = {}
         self._subscribed_video_streams: set[tuple[int, int]] = set()
+        self._audio_streams: dict[int, dict[str, Any]] = {}
+        self._subscribed_audio_streams: set[tuple[int, int]] = set()
 
         self._message_loop_task: asyncio.Task[None] | None = None
         self._ping_task: asyncio.Task[None] | None = None
@@ -96,6 +99,10 @@ class AgoraWebSocketHandler:
         self._subscribe_retry_attempts = subscribe_retry_attempts
         self._declare_remote_video_ssrc = declare_remote_video_ssrc
         self._disable_audio_answer = disable_audio_answer
+        # With audio enabled we hold the SDP answer briefly after the video
+        # announcement so the audio SSRC can be declared too.
+        self._expect_audio = not disable_audio_answer
+        self._awaiting_audio = False
 
         self._setup_message_handlers()
 
@@ -108,6 +115,7 @@ class AgoraWebSocketHandler:
             "on_rtp_capability_change": self._handle_rtp_capability_change,
             "on_user_online": self._handle_user_online,
             "on_add_video_stream": self._handle_add_video_stream,
+            "on_add_audio_stream": self._handle_add_audio_stream,
         }
 
     def add_ice_candidate(self, candidate: RTCIceCandidateInit) -> None:
@@ -227,7 +235,24 @@ class AgoraWebSocketHandler:
         """Wait for join success / answer after join_v3."""
         try:
             async with asyncio.timeout(15):
-                async for raw_message in websocket:
+                while True:
+                    if self._awaiting_audio:
+                        try:
+                            raw_message = await asyncio.wait_for(
+                                websocket.recv(), timeout=0.5
+                            )
+                        except TimeoutError:
+                            LOGGER.debug(
+                                "No audio announcement within grace period; "
+                                "finalizing SDP answer without audio SSRC"
+                            )
+                            self._awaiting_audio = False
+                            answer = self._finalize_pending_answer()
+                            if answer:
+                                return answer
+                            continue
+                    else:
+                        raw_message = await websocket.recv()
                     try:
                         response = json.loads(raw_message)
                     except json.JSONDecodeError:
@@ -403,6 +428,11 @@ class AgoraWebSocketHandler:
             LOGGER.debug("Waiting for on_add_video_stream before finalizing SDP answer")
             return None
 
+        if self._expect_audio and self._primary_audio_stream() is None:
+            LOGGER.debug("Video known at join; holding SDP answer briefly for audio")
+            self._awaiting_audio = True
+            return None
+
         return self._finalize_pending_answer()
 
     async def _handle_answer(self, response: dict[str, Any]) -> str | None:
@@ -470,6 +500,12 @@ class AgoraWebSocketHandler:
                 self._pending_answer_ortc is not None
                 and self._pending_offer_info is not None
             ):
+                if self._expect_audio and self._primary_audio_stream() is None:
+                    LOGGER.debug(
+                        "Video announced; holding SDP answer briefly for audio"
+                    )
+                    self._awaiting_audio = True
+                    return None
                 return self._finalize_pending_answer()
 
         return None
@@ -509,6 +545,54 @@ class AgoraWebSocketHandler:
         }
         await self._websocket.send(json.dumps(message))
 
+    async def _handle_add_audio_stream(self, response: dict[str, Any]) -> None:
+        """Auto-subscribe to newly announced audio stream.
+
+        The device announces its audio track with on_add_audio_stream; without
+        an explicit subscribe Agora never forwards audio RTP, so the negotiated
+        audio m-line stays silent.
+        """
+        message = response.get("_message", {})
+        uid = message.get("uid")
+        ssrc_id = message.get("ssrcId")
+        cname = message.get("cname")
+        is_audio = bool(message.get("audio"))
+
+        if not isinstance(uid, int) or not is_audio:
+            return None
+
+        LOGGER.debug(
+            "Agora on_add_audio_stream: uid=%s ssrc=%s pt=%s",
+            uid,
+            ssrc_id,
+            message.get("pt"),
+        )
+        self._audio_streams[uid] = {"ssrcId": ssrc_id, "cname": cname}
+
+        if isinstance(ssrc_id, int):
+            await self._subscribe_audio_stream(uid=uid, ssrc_id=ssrc_id)
+            if (
+                self._awaiting_audio
+                and self._pending_answer_ortc is not None
+                and self._pending_offer_info is not None
+            ):
+                self._awaiting_audio = False
+                return self._finalize_pending_answer()
+        return None
+
+    async def _subscribe_audio_stream(self, uid: int, ssrc_id: int) -> None:
+        """Subscribe once per `(uid, ssrc_id)` pair."""
+        if (uid, ssrc_id) in self._subscribed_audio_streams:
+            return
+        await self._send_subscribe(
+            stream_id=uid,
+            ssrc_id=ssrc_id,
+            codec=AUDIO_SUBSCRIBE_CODEC,
+            stream_type="audio",
+            rtx=False,
+        )
+        self._subscribed_audio_streams.add((uid, ssrc_id))
+
     async def _send_subscribe(
         self,
         stream_id: int,
@@ -547,7 +631,8 @@ class AgoraWebSocketHandler:
             },
         }
         await self._websocket.send(json.dumps(message))
-        self._subscribed_video_streams.add((stream_id, ssrc_id))
+        if stream_type == "video":
+            self._subscribed_video_streams.add((stream_id, ssrc_id))
 
     async def _subscribe_video_stream(self, uid: int, ssrc_id: int) -> None:
         """Subscribe once per `(uid, ssrc_id)` pair."""
@@ -885,6 +970,16 @@ class AgoraWebSocketHandler:
                 return stream
         return None
 
+    def _primary_audio_stream(self) -> dict[str, Any] | None:
+        """Return the first announced audio stream that exposes an SSRC."""
+        if not self._expect_audio:
+            return None
+
+        for stream in self._audio_streams.values():
+            if isinstance(stream.get("ssrcId"), int):
+                return stream
+        return None
+
     @staticmethod
     def _bundle_mids(offer_info: OfferSdpInfo) -> str:
         """Return the BUNDLE mids declared by the offer."""
@@ -1008,6 +1103,7 @@ class AgoraWebSocketHandler:
     @staticmethod
     def _build_video_ssrc_lines(
         primary_video_stream: dict[str, Any] | None,
+        primary_audio_stream: dict[str, Any] | None = None,
     ) -> list[str]:
         """Build SSRC lines for the announced remote video stream."""
         if primary_video_stream is None:
@@ -1030,6 +1126,27 @@ class AgoraWebSocketHandler:
             ssrc_lines.append(f"a=ssrc-group:FID {video_ssrc} {rtx_ssrc}")
             ssrc_lines.append(f"a=ssrc:{rtx_ssrc} cname:{cname}")
         return ssrc_lines
+
+    @staticmethod
+    def _build_audio_ssrc_lines(
+        primary_audio_stream: dict[str, Any] | None,
+    ) -> list[str]:
+        """Build SSRC lines for the announced remote audio stream."""
+        if primary_audio_stream is None:
+            return []
+
+        audio_ssrc = primary_audio_stream.get("ssrcId")
+        if not isinstance(audio_ssrc, int):
+            return []
+
+        cname = primary_audio_stream.get("cname") or "agora"
+        return [
+            "a=msid:agora agora-audio",
+            f"a=ssrc:{audio_ssrc} cname:{cname}",
+            f"a=ssrc:{audio_ssrc} msid:agora agora-audio",
+            f"a=ssrc:{audio_ssrc} mslabel:agora",
+            f"a=ssrc:{audio_ssrc} label:agora-audio",
+        ]
 
     def _build_media_section_lines(
         self,
@@ -1084,6 +1201,8 @@ class AgoraWebSocketHandler:
         sdp_lines.extend(self._build_codec_lines(codecs))
         if media_type == "video":
             sdp_lines.extend(self._build_video_ssrc_lines(primary_video_stream))
+        elif media_type == "audio":
+            sdp_lines.extend(self._build_audio_ssrc_lines(primary_audio_stream))
         return sdp_lines
 
     def _generate_answer_sdp(
@@ -1114,6 +1233,7 @@ class AgoraWebSocketHandler:
                 ice_parameters.get("candidates", []) or []
             )
             primary_video_stream = self._primary_video_stream()
+            primary_audio_stream = self._primary_audio_stream()
 
             for index, media in enumerate(media_sections):
                 sdp_lines.extend(
@@ -1127,6 +1247,7 @@ class AgoraWebSocketHandler:
                         fingerprint=fingerprint,
                         candidate_lines=candidate_lines,
                         primary_video_stream=primary_video_stream,
+                        primary_audio_stream=primary_audio_stream,
                     )
                 )
 
@@ -1217,3 +1338,6 @@ class AgoraWebSocketHandler:
         self._connection_state = "DISCONNECTED"
         self._video_streams.clear()
         self._subscribed_video_streams.clear()
+        self._audio_streams.clear()
+        self._subscribed_audio_streams.clear()
+        self._awaiting_audio = False

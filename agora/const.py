@@ -11,3 +11,8 @@ AGORA_APP_ID = "244c49951296440cbc1e3b937bf5e410"
 # Audio nelle sessioni camera (WHEP). Attivo di default; impostare
 # PETKIT_CAMERA_AUDIO=0 per tornare al comportamento video-only.
 CAMERA_AUDIO = os.environ.get("PETKIT_CAMERA_AUDIO", "1") == "1"
+
+# Codec name sent in the Agora "subscribe" message for the audio stream.
+# The protocol is undocumented; override with PETKIT_AUDIO_SUBSCRIBE_CODEC
+# if audio stays silent (e.g. "pcmu", "opus", "g722", "aac").
+AUDIO_SUBSCRIBE_CODEC = os.environ.get("PETKIT_AUDIO_SUBSCRIBE_CODEC", "opus")
