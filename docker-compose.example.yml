@@ -1,12 +1,24 @@
-# Copy to `docker-compose.yml` and adapt paths/ports to your setup.
+# Copy to `docker-compose.yml`, then `cp .env.example .env` and fill it in.
+#
+# This file runs the two containers a full setup needs:
+#   - petkit-bridge  the bridge itself (required)
+#   - go2rtc         only needed for cameras; delete the service otherwise
+#
+# Both use the host network so the Homebridge plugin can reach them on
+# 127.0.0.1 when it runs on the same machine. If you prefer isolated
+# networks, switch to `ports:` mappings (8787 for the bridge, 1984/8554
+# for go2rtc) and point the plugin at the host's LAN address instead.
+
 services:
   petkit-bridge:
-    build: .
+    image: ghcr.io/raulhartzen/petkit-bridge:latest
+    # To build from source instead of pulling the image, replace the line
+    # above with:
+    # build: .
     container_name: petkit-bridge
     restart: unless-stopped
+    network_mode: host
     env_file: .env
-    ports:
-      - "8787:8787"
     healthcheck:
       # ?strict=1 -> 503 when the PetKit session is not valid: this lets
       # Docker restart the container even when the process is alive but
@@ -17,3 +29,13 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+
+  # --- Cameras only ---------------------------------------------------
+  # go2rtc turns the bridge's WHEP streams into RTSP for ffmpeg/HomeKit.
+  # No configuration file is needed: the Homebridge plugin registers the
+  # camera streams on go2rtc's API at startup.
+  go2rtc:
+    image: alexxit/go2rtc:latest
+    container_name: petkit-go2rtc
+    restart: unless-stopped
+    network_mode: host

@@ -44,16 +44,34 @@ The bridge is designed to be **resilient to cloud session expiry**: the PetKit s
 
 ## Quick start
 
+Prebuilt images are published on GitHub Container Registry for `linux/amd64`
+and `linux/arm64` (Raspberry Pi 4/5), so no build step is needed:
+
 ```bash
-git clone https://github.com/raulhartzen/petkit-bridge.git
-cd petkit-bridge
-cp .env.example .env        # fill in credentials and token
-cp docker-compose.example.yml docker-compose.yml
-docker compose up -d --build
+mkdir petkit-bridge && cd petkit-bridge
+curl -O https://raw.githubusercontent.com/raulhartzen/petkit-bridge/main/.env.example
+curl -O https://raw.githubusercontent.com/raulhartzen/petkit-bridge/main/docker-compose.example.yml
+cp .env.example .env                                  # fill in credentials and token
+cp docker-compose.example.yml docker-compose.yml     # delete the go2rtc service if you have no cameras
+docker compose up -d
 docker compose logs -f petkit-bridge
 ```
 
 On a successful start you will see the login to the PetKit server and the discovery of your devices. Configuration happens exclusively via environment variables, documented one by one in [`.env.example`](.env.example).
+
+To update: `docker compose pull && docker compose up -d`.
+
+<details>
+<summary>Build from source instead</summary>
+
+```bash
+git clone https://github.com/raulhartzen/petkit-bridge.git
+cd petkit-bridge
+cp .env.example .env
+cp docker-compose.example.yml docker-compose.yml   # then replace `image:` with `build: .`
+docker compose up -d --build
+```
+</details>
 
 ## API
 
@@ -230,6 +248,8 @@ If the first live view stays black, retry after a few seconds: the initial reque
 - If the `pypetkitapi` library changes its exception structure, expired-session detection keeps working via the error-message fallback (already included).
 
 ## Credits
+
+See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for full license texts.
 
 - [pypetkitapi](https://github.com/Jezza34000/py-petkit-api) by Jezza34000 — the PetKit cloud client this bridge is built on.
 - The `agora/` streaming module is adapted from [homeassistant_petkit](https://github.com/Jezza34000/homeassistant_petkit) by Jezza34000 (MIT), with Agora reverse engineering originally by [@mikey0000](https://github.com/mikey0000).
