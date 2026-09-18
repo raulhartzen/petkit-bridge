@@ -1103,7 +1103,6 @@ class AgoraWebSocketHandler:
     @staticmethod
     def _build_video_ssrc_lines(
         primary_video_stream: dict[str, Any] | None,
-        primary_audio_stream: dict[str, Any] | None = None,
     ) -> list[str]:
         """Build SSRC lines for the announced remote video stream."""
         if primary_video_stream is None:
@@ -1160,6 +1159,7 @@ class AgoraWebSocketHandler:
         fingerprint: str,
         candidate_lines: list[str],
         primary_video_stream: dict[str, Any] | None,
+        primary_audio_stream: dict[str, Any] | None = None,
     ) -> list[str]:
         """Build the SDP lines for one audio or video media section."""
         media_type = media.get("type", "audio")
